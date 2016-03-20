@@ -1,8 +1,8 @@
-var fs = require('fs');
+﻿var fs = require('fs');
 var net = require('net');
 
 var ip_address = '192.168.1.64';
-var port = 1234;
+var port = 1235;
 
 var file_name = '2.mp4';
 
@@ -19,6 +19,7 @@ var file_count = 0;
 
 require('net').createServer(function (socket) {
     console.log("connected");
+    var remote_ip = socket.remoteAddress;
     var pos = 0;
     var cur_id = file_count;
     // Генерируем уникальное имя для файла.
@@ -47,7 +48,7 @@ require('net').createServer(function (socket) {
         fs.closeSync(fd);
 
         if(message_type == ReveiveFileAndExecProc) {
-            ExecProcAndSendFile(tmp_file_name, socket.remoteAddress);
+            ExecProcAndSendFile(tmp_file_name, remote_ip);
         }
     });
 }).listen(port);
@@ -58,8 +59,10 @@ function ExecProcAndSendFile(file_name, ip_address){
     var copy_file_name = file_name + '_copy';
     exec('CopyPaster.exe ' + file_name + ' ' + copy_file_name, function (err, stdout, stderr) {
         // Возвращаем результат выполнения по указанному IP-адресу.
-        Send(ip_address, port, copy_file_name, ReceiveFile);
+        Send(ip_address, 1234, copy_file_name, ReceiveFile);
         console.log('Выполнена подпрограмма и результат отправлен по адресу ');
+        fs.unlink(copy_file_name);
+        fs.unlink(file_name);
     });
 }
 
@@ -67,9 +70,9 @@ function ExecProcAndSendFile(file_name, ip_address){
 function Send(ip, port, file_name, type) {
     // Открываем файл для чтения.
     fd = fs.openSync(file_name, 'r');
-
+    console.log(ip + ':' + port);
     // Устанавливаем соединение через сокет.
-    var client = net.connect(port, ip);
+    var client = net.connect({ host: ip, port: port });
 
     var s_buffer = new Buffer(1);
     s_buffer[0] = type;
@@ -83,7 +86,8 @@ function Send(ip, port, file_name, type) {
     while (true) {
         var size = fs.readSync(fd, buffer, 0, max_size, pos);
 
-        if (size == 0) { break; }
+        //console.log(size);
+        if (size == 0) {break; }
 
         pos += size;
         var send_buffer = new Buffer(size);
