@@ -34,18 +34,14 @@ require('net').createServer(function (socket) {
     var writable = fs.createWriteStream(tmp_file_name);
 
     function wait_first_block( data ) {
-        var bufferStream = new streamm.PassThrough();
-        if(message_type == -1)
-        {
-            message_type = data.slice(0,1)[0];
-            bufferStream.write(data.slice(1));
-            console.log('type = ', message_type);
-        }
-        else
-        {
-            bufferStream.write(data);
-        }
-        bufferStream.pipe(writable).setMaxListeners(20);
+        // первой командой уберем слушатель (важно что первой)
+        // пример по removeListener http://stackoverflow.com/questions/23893872/how-to-properly-remove-event-listeners-in-node-js-eventemitter
+        socket.removeListener( 'data',wait_first_block);
+        message_type = data.slice(0,1)[0];
+        console.log('type = ', message_type);
+        writable.write(data.slice(1), function() {
+            socket.pipe( writable ); // после того как запишем 1 блок, остальное pipe-им
+        });
     }
 
     socket.on('data',wait_first_block);
