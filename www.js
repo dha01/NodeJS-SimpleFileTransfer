@@ -49,10 +49,6 @@ require('net').createServer(function (socket) {
     // Файл был получен.
     socket.on('end', function() {
         console.log('Получен файл.');
-        var bufferStream = new streamm.PassThrough();
-        bufferStream.end();
-        bufferStream.pipe(writable);
-
         if(message_type == ReveiveFileAndExecProc) {
             ExecProcAndSendFile(tmp_file_name, remote_ip);
             //fs.unlink(file_name);
